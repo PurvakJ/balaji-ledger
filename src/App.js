@@ -2,8 +2,9 @@
 // React Frontend for Sales & Purchase Ledger System
 // WITH DASHBOARD IMPROVEMENTS, ANALYTICS, & BalaJi PREMIUM STYLING
 // UPDATED: Login state persistence using localStorage (no re-login on refresh)
+// FIXED: ESLint warnings (unused variables, useEffect dependencies)
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 // ================= API URL =================
 // REPLACE WITH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL
@@ -30,8 +31,7 @@ export default function App() {
   const [sales, setSales] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [expenses, setExpenses] = useState([]);
-  const [customers, setCustomers] = useState([]);
-  const [vendors, setVendors] = useState([]);
+  // Removed unused customers and vendors states
   const [customerBalances, setCustomerBalances] = useState([]);
   const [vendorBalances, setVendorBalances] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -107,18 +107,8 @@ export default function App() {
     description: "",
   });
 
-  // ================= CHECK FOR EXISTING LOGIN SESSION ON MOUNT =================
-  useEffect(() => {
-    const savedLogin = localStorage.getItem("balaji_ledger_login");
-    if (savedLogin === "true") {
-      setLoggedIn(true);
-      loadDashboard();
-      loadAllData();
-    }
-  }, []); // Empty dependency array ensures this runs only once on mount
-
   // ================= API CALL =================
-  const apiCall = async (payload) => {
+  const apiCall = useCallback(async (payload) => {
     try {
       setLoading(true);
       const response = await fetch(API_URL, {
@@ -135,7 +125,63 @@ export default function App() {
       alert("API Error: " + err.message);
       return null;
     }
-  };
+  }, []);
+
+  // ================= LOAD FUNCTIONS (defined before useEffect) =================
+  const loadStats = useCallback(async () => {
+    const res = await apiCall({ action: "getDashboardStats" });
+    if (res?.success) setStats(res.data);
+  }, [apiCall]);
+
+  const loadSales = useCallback(async () => {
+    const res = await apiCall({ action: "getAllSales" });
+    if (res?.success) setSales(res.data || []);
+  }, [apiCall]);
+
+  const loadPurchases = useCallback(async () => {
+    const res = await apiCall({ action: "getAllPurchases" });
+    if (res?.success) setPurchases(res.data || []);
+  }, [apiCall]);
+
+  const loadExpenses = useCallback(async () => {
+    const res = await apiCall({ action: "getAllExpenses" });
+    if (res?.success) setExpenses(res.data || []);
+  }, [apiCall]);
+
+  const loadCustomerBalances = useCallback(async () => {
+    const res = await apiCall({ action: "getAllCustomerBalances" });
+    if (res?.success) setCustomerBalances(res.data || []);
+  }, [apiCall]);
+
+  const loadVendorBalances = useCallback(async () => {
+    const res = await apiCall({ action: "getAllVendorBalances" });
+    if (res?.success) setVendorBalances(res.data || []);
+  }, [apiCall]);
+
+  const loadAllData = useCallback(async () => {
+    await Promise.all([
+      loadStats(),
+      loadSales(),
+      loadPurchases(),
+      loadExpenses(),
+      loadCustomerBalances(),
+      loadVendorBalances(),
+    ]);
+  }, [loadStats, loadSales, loadPurchases, loadExpenses, loadCustomerBalances, loadVendorBalances]);
+
+  const loadDashboard = useCallback(async () => {
+    await loadStats();
+  }, [loadStats]);
+
+  // ================= CHECK FOR EXISTING LOGIN SESSION ON MOUNT =================
+  useEffect(() => {
+    const savedLogin = localStorage.getItem("balaji_ledger_login");
+    if (savedLogin === "true") {
+      setLoggedIn(true);
+      loadDashboard();
+      loadAllData();
+    }
+  }, [loadDashboard, loadAllData]); // Added proper dependencies
 
   // ================= LOGIN =================
   const handleLogin = async () => {
@@ -176,8 +222,6 @@ export default function App() {
     setSales([]);
     setPurchases([]);
     setExpenses([]);
-    setCustomers([]);
-    setVendors([]);
     setCustomerBalances([]);
     setVendorBalances([]);
     setCustomerLedger([]);
@@ -187,32 +231,8 @@ export default function App() {
     setActiveTab("dashboard");
   };
 
-  // ================= LOAD ALL DATA =================
-  const loadAllData = async () => {
-    await Promise.all([
-      loadStats(),
-      loadSales(),
-      loadPurchases(),
-      loadExpenses(),
-      loadCustomers(),
-      loadVendors(),
-      loadCustomerBalances(),
-      loadVendorBalances(),
-    ]);
-  };
-
-  const loadDashboard = async () => {
-    await loadStats();
-  };
-
-  // ================= LOAD STATS WITH RETURNS =================
-  const loadStats = async () => {
-    const res = await apiCall({ action: "getDashboardStats" });
-    if (res?.success) setStats(res.data);
-  };
-
   // ================= SALES ANALYTICS =================
-  const loadSalesAnalytics = async (filter, startDate = null, endDate = null) => {
+  const loadSalesAnalytics = useCallback(async (filter, startDate = null, endDate = null) => {
     let payload = { action: "getSalesAnalytics", filter };
     if (filter === "custom" && startDate && endDate) {
       payload.startDate = startDate;
@@ -222,9 +242,9 @@ export default function App() {
     if (res?.success) {
       setAnalyticsData(res.data);
     }
-  };
+  }, [apiCall]);
 
-  const handleAnalyticsFilter = (filter) => {
+  const handleAnalyticsFilter = useCallback((filter) => {
     setAnalyticsFilter(filter);
     if (filter === "today") {
       loadSalesAnalytics("today");
@@ -237,7 +257,7 @@ export default function App() {
     } else if (filter === "custom" && customDateRange.start && customDateRange.end) {
       loadSalesAnalytics("custom", customDateRange.start, customDateRange.end);
     }
-  };
+  }, [loadSalesAnalytics, customDateRange.start, customDateRange.end]);
 
   const openAnalytics = () => {
     setShowAnalytics(true);
@@ -256,11 +276,6 @@ export default function App() {
       setSaleForm({ customer_name: "", phone: "", amount: "", status: "unpaid", notes: "" });
       loadAllData();
     }
-  };
-
-  const loadSales = async () => {
-    const res = await apiCall({ action: "getAllSales" });
-    if (res?.success) setSales(res.data || []);
   };
 
   const addSalesReturn = async () => {
@@ -312,11 +327,6 @@ export default function App() {
     }
   };
 
-  const loadPurchases = async () => {
-    const res = await apiCall({ action: "getAllPurchases" });
-    if (res?.success) setPurchases(res.data || []);
-  };
-
   const addPurchaseReturn = async () => {
     if (!purchaseReturnForm.vendor_name || !purchaseReturnForm.phone || !purchaseReturnForm.return_amount) {
       alert("Please fill all required fields");
@@ -366,11 +376,6 @@ export default function App() {
     }
   };
 
-  const loadExpenses = async () => {
-    const res = await apiCall({ action: "getAllExpenses" });
-    if (res?.success) setExpenses(res.data || []);
-  };
-
   const deleteExpense = async (id) => {
     if (window.confirm("Are you sure?")) {
       const res = await apiCall({ action: "deleteExpense", id });
@@ -379,27 +384,6 @@ export default function App() {
         loadAllData();
       }
     }
-  };
-
-  // ================= CUSTOMERS & VENDORS =================
-  const loadCustomers = async () => {
-    const res = await apiCall({ action: "getAllCustomers" });
-    if (res?.success) setCustomers(res.data || []);
-  };
-
-  const loadVendors = async () => {
-    const res = await apiCall({ action: "getAllVendors" });
-    if (res?.success) setVendors(res.data || []);
-  };
-
-  const loadCustomerBalances = async () => {
-    const res = await apiCall({ action: "getAllCustomerBalances" });
-    if (res?.success) setCustomerBalances(res.data || []);
-  };
-
-  const loadVendorBalances = async () => {
-    const res = await apiCall({ action: "getAllVendorBalances" });
-    if (res?.success) setVendorBalances(res.data || []);
   };
 
   // ================= LOGIN SCREEN =================
