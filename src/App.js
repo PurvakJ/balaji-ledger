@@ -1,8 +1,7 @@
 // ============================ APP.JS ============================
 // React Frontend for Sales & Purchase Ledger System
-// WITH DASHBOARD IMPROVEMENTS, ANALYTICS, & BalaJi PREMIUM STYLING
-// UPDATED: Login state persistence using localStorage (no re-login on refresh)
-// FIXED: ESLint warnings (unused variables, useEffect dependencies)
+// WITH DASHBOARD IMPROVEMENTS, ANALYTICS, & BALAJI PREMIUM STYLING
+// UPDATED: Only one action form open at a time in Sales & Purchase tabs
 
 import React, { useState, useEffect, useCallback } from "react";
 
@@ -31,7 +30,6 @@ export default function App() {
   const [sales, setSales] = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [expenses, setExpenses] = useState([]);
-  // Removed unused customers and vendors states
   const [customerBalances, setCustomerBalances] = useState([]);
   const [vendorBalances, setVendorBalances] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -39,6 +37,10 @@ export default function App() {
   const [customerLedger, setCustomerLedger] = useState([]);
   const [vendorLedger, setVendorLedger] = useState([]);
   
+  // UI State for expanding forms - Only ONE active per section
+  const [activeSalesForm, setActiveSalesForm] = useState("addSale"); // "addSale", "addReturn", "recordPayment"
+  const [activePurchaseForm, setActivePurchaseForm] = useState("addPurchase"); // "addPurchase", "addReturn", "recordPayment"
+
   // Analytics State
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [analyticsData, setAnalyticsData] = useState(null);
@@ -127,7 +129,7 @@ export default function App() {
     }
   }, []);
 
-  // ================= LOAD FUNCTIONS (defined before useEffect) =================
+  // ================= LOAD FUNCTIONS =================
   const loadStats = useCallback(async () => {
     const res = await apiCall({ action: "getDashboardStats" });
     if (res?.success) setStats(res.data);
@@ -173,7 +175,7 @@ export default function App() {
     await loadStats();
   }, [loadStats]);
 
-  // ================= CHECK FOR EXISTING LOGIN SESSION ON MOUNT =================
+  // ================= CHECK FOR EXISTING LOGIN SESSION =================
   useEffect(() => {
     const savedLogin = localStorage.getItem("balaji_ledger_login");
     if (savedLogin === "true") {
@@ -181,7 +183,7 @@ export default function App() {
       loadDashboard();
       loadAllData();
     }
-  }, [loadDashboard, loadAllData]); // Added proper dependencies
+  }, [loadDashboard, loadAllData]);
 
   // ================= LOGIN =================
   const handleLogin = async () => {
@@ -191,7 +193,6 @@ export default function App() {
       password: loginData.password,
     });
     if (res?.success) {
-      // Save login state to localStorage
       localStorage.setItem("balaji_ledger_login", "true");
       setLoggedIn(true);
       loadDashboard();
@@ -205,7 +206,6 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem("balaji_ledger_login");
     setLoggedIn(false);
-    // Reset all data states
     setStats({
       totalSales: 0,
       totalPurchases: 0,
@@ -226,8 +226,6 @@ export default function App() {
     setVendorBalances([]);
     setCustomerLedger([]);
     setVendorLedger([]);
-    setSelectedCustomer(null);
-    setSelectedVendor(null);
     setActiveTab("dashboard");
   };
 
@@ -392,8 +390,9 @@ export default function App() {
       <div style={styles.loginContainer}>
         <div style={styles.loginCard}>
           <div style={{ textAlign: "center", marginBottom: 20 }}>
-            <div style={{ fontSize: 48, marginBottom: 10 }}>📊</div>
-            <h1 style={{ color: "var(--BalaJi-text-dark)" }}>Ledger Login</h1>
+            <div style={{ fontSize: 48, marginBottom: 10 }}>🌿</div>
+            <h1 style={{ color: "#2C3E2F" }}>BalaJi Ledger</h1>
+            <p style={{ color: "#666" }}>Sales & Purchase Management System</p>
           </div>
           <input
             style={styles.input}
@@ -408,7 +407,6 @@ export default function App() {
             value={loginData.password}
             onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
           />
-          <br></br>
           <button style={styles.button} onClick={handleLogin}>
             {loading ? "Loading..." : "Login"}
           </button>
@@ -417,49 +415,24 @@ export default function App() {
     );
   }
 
-  // ================= MAIN APP WITH BalaJi STYLING =================
+  // ================= MAIN APP =================
   return (
     <div className="home" style={styles.container}>
       {/* Premium Header */}
       <div style={styles.premiumHeader}>
-        <div className="container" style={{ maxWidth: 1400, margin: "0 auto", padding: "0 24px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 20 }}>
+        <div style={{ maxWidth: 1400, margin: "0 auto", padding: "0 24px" }}>
+          <div style={styles.headerContent}>
             <div>
-              <h1 style={{ fontSize: "1.8rem", margin: 0, fontFamily: "'Playfair Display', serif" }}>
-                🌿 <span style={{ color: "var(--BalaJi-sage)" }}>BalaJi</span> Ledger
+              <h1 style={styles.logo}>
+                <span style={{ color: "#9BB875" }}>BalaJi</span> Ledger
               </h1>
-              <p style={{ margin: 0, fontSize: "0.8rem", opacity: 0.8 }}>Sales & Purchase Management System</p>
+              <p style={styles.tagline}>Sales & Purchase Management System</p>
             </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <button 
-                onClick={openAnalytics}
-                style={{
-                  background: "linear-gradient(135deg, var(--BalaJi-sage), var(--BalaJi-sage-dark))",
-                  border: "none",
-                  padding: "10px 20px",
-                  borderRadius: 50,
-                  color: "var(--BalaJi-text-dark)",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8
-                }}
-              >
+            <div style={styles.headerActions}>
+              <button onClick={openAnalytics} style={styles.analyticsBtn}>
                 📊 Analytics
               </button>
-              <button 
-                onClick={handleLogout}
-                style={{
-                  background: "transparent",
-                  border: "1px solid var(--BalaJi-cream-dark)",
-                  padding: "10px 20px",
-                  borderRadius: 50,
-                  color: "var(--BalaJi-text-dark)",
-                  fontWeight: 600,
-                  cursor: "pointer"
-                }}
-              >
+              <button onClick={handleLogout} style={styles.logoutBtn}>
                 Logout
               </button>
             </div>
@@ -469,7 +442,7 @@ export default function App() {
 
       {/* Navigation Tabs */}
       <div style={styles.tabsWrapper}>
-        <div className="container" style={{ maxWidth: 1400, margin: "0 auto", padding: "0 24px" }}>
+        <div style={{ maxWidth: 1400, margin: "0 auto", padding: "0 24px" }}>
           <div style={styles.tabs}>
             {["dashboard", "sales", "purchases", "expenses", "customers", "vendors"].map(tab => (
               <button
@@ -489,197 +462,289 @@ export default function App() {
         </div>
       </div>
 
-      {loading && <div style={styles.loader}>Loading...</div>}
+      {loading && (
+        <div style={styles.loaderOverlay}>
+          <div style={styles.loader}></div>
+        </div>
+      )}
 
-      <div className="container" style={{ maxWidth: 1400, margin: "0 auto", padding: "0 24px 40px" }}>
+      <div style={{ maxWidth: 1400, margin: "0 auto", padding: "0 24px 40px" }}>
         {/* DASHBOARD TAB */}
         {activeTab === "dashboard" && (
           <>
-            {/* Stats Grid */}
             <div style={styles.statsGrid}>
-              <Card title="Total Sales" value={`₹${stats.totalSales?.toLocaleString() || 0}`} icon="💰" color="#27AE60" />
-              <Card title="Sales Returns" value={`₹${stats.totalSalesReturns?.toLocaleString() || 0}`} icon="↩️" color="#E74C3C" />
-              <Card title="Actual Sales" value={`₹${stats.actualSales?.toLocaleString() || 0}`} icon="✨" color="#9BB875" />
-              <Card title="Total Purchases" value={`₹${stats.totalPurchases?.toLocaleString() || 0}`} icon="📦" color="#E67E22" />
-              <Card title="Purchase Returns" value={`₹${stats.totalPurchaseReturns?.toLocaleString() || 0}`} icon="🔄" color="#E74C3C" />
-              <Card title="Total Expenses" value={`₹${stats.totalExpenses?.toLocaleString() || 0}`} icon="💸" color="#3498DB" />
-              <Card title="Net Profit" value={`₹${stats.netProfit?.toLocaleString() || 0}`} icon="📈" color={stats.netProfit >= 0 ? "#27AE60" : "#E74C3C"} />
-              <Card title="Customer Pending" value={`₹${stats.totalCustomerPending?.toLocaleString() || 0}`} icon="⏳" color="#F39C12" />
-              <Card title="Vendor Pending" value={`₹${stats.totalVendorPending?.toLocaleString() || 0}`} icon="⏳" color="#F39C12" />
+              <StatCard title="Total Sales" value={stats.totalSales} icon="💰" color="#27AE60" />
+              <StatCard title="Sales Returns" value={stats.totalSalesReturns} icon="↩️" color="#E74C3C" />
+              <StatCard title="Actual Sales" value={stats.actualSales} icon="✨" color="#9BB875" />
+              <StatCard title="Total Purchases" value={stats.totalPurchases} icon="📦" color="#E67E22" />
+              <StatCard title="Purchase Returns" value={stats.totalPurchaseReturns} icon="🔄" color="#E74C3C" />
+              <StatCard title="Total Expenses" value={stats.totalExpenses} icon="💸" color="#3498DB" />
+              <StatCard title="Net Profit" value={stats.netProfit} icon="📈" color={stats.netProfit >= 0 ? "#27AE60" : "#E74C3C"} />
+              <StatCard title="Customer Pending" value={stats.totalCustomerPending} icon="⏳" color="#F39C12" />
+              <StatCard title="Vendor Pending" value={stats.totalVendorPending} icon="⏳" color="#F39C12" />
             </div>
 
-            {/* Quick Actions */}
-            <div style={styles.section}>
+            <div style={styles.quickActionsSection}>
               <h2 style={styles.sectionTitle}>Quick Actions</h2>
-              <div style={{ display: "flex", gap: 15, flexWrap: "wrap" }}>
-                <button style={styles.quickButton} onClick={() => setActiveTab("sales")}>➕ Add Sale</button>
-                <button style={styles.quickButton} onClick={() => setActiveTab("purchases")}>📦 Add Purchase</button>
-                <button style={styles.quickButton} onClick={() => setActiveTab("expenses")}>💸 Add Expense</button>
-                <button style={styles.quickButtonSecondary} onClick={() => setActiveTab("customers")}>👥 View Customers</button>
-                <button style={styles.quickButtonSecondary} onClick={() => setActiveTab("vendors")}>🏢 View Vendors</button>
-                <button style={styles.quickButtonAnalytics} onClick={openAnalytics}>📊 Sales Analytics</button>
+              <div style={styles.quickActionsGrid}>
+                <QuickActionCard icon="💰" title="Add Sale" color="#9BB875" onClick={() => setActiveTab("sales")} />
+                <QuickActionCard icon="📦" title="Add Purchase" color="#E67E22" onClick={() => setActiveTab("purchases")} />
+                <QuickActionCard icon="💸" title="Add Expense" color="#3498DB" onClick={() => setActiveTab("expenses")} />
+                <QuickActionCard icon="👥" title="View Customers" color="#8E44AD" onClick={() => setActiveTab("customers")} />
+                <QuickActionCard icon="🏢" title="View Vendors" color="#16A085" onClick={() => setActiveTab("vendors")} />
+                <QuickActionCard icon="📊" title="Analytics" color="#3A7BD5" onClick={openAnalytics} />
               </div>
             </div>
           </>
         )}
 
-        {/* SALES TAB */}
+        {/* SALES TAB - Only one form open at a time */}
         {activeTab === "sales" && (
-          <>
-            <Section title="Add Sale">
-              <div style={styles.formRow}>
-                <input style={styles.input} placeholder="Customer Name *" value={saleForm.customer_name} onChange={(e) => setSaleForm({ ...saleForm, customer_name: e.target.value })} />
-                <input style={styles.input} placeholder="Phone *" value={saleForm.phone} onChange={(e) => setSaleForm({ ...saleForm, phone: e.target.value })} />
-                <input style={styles.input} placeholder="Amount *" type="number" value={saleForm.amount} onChange={(e) => setSaleForm({ ...saleForm, amount: e.target.value })} />
-                <select style={styles.input} value={saleForm.status} onChange={(e) => setSaleForm({ ...saleForm, status: e.target.value })}>
-                  <option value="unpaid">Unpaid</option>
-                  <option value="paid">Paid</option>
-                </select>
-                <input style={styles.input} placeholder="Notes" value={saleForm.notes} onChange={(e) => setSaleForm({ ...saleForm, notes: e.target.value })} />
-                <button style={styles.button} onClick={addSale}>Add Sale</button>
-              </div>
-            </Section>
+          <div style={styles.tabContent}>
+            <div style={styles.actionButtonsGroup}>
+              <ActionButton 
+                active={activeSalesForm === "addSale"} 
+                onClick={() => setActiveSalesForm("addSale")}
+                icon="➕" 
+                label="Add Sale" 
+                color="#9BB875"
+              />
+              <ActionButton 
+                active={activeSalesForm === "addReturn"} 
+                onClick={() => setActiveSalesForm("addReturn")}
+                icon="↩️" 
+                label="Add Return" 
+                color="#E74C3C"
+              />
+              <ActionButton 
+                active={activeSalesForm === "recordPayment"} 
+                onClick={() => setActiveSalesForm("recordPayment")}
+                icon="💵" 
+                label="Record Payment" 
+                color="#27AE60"
+              />
+            </div>
 
-            <Section title="Add Sales Return">
-              <div style={styles.formRow}>
-                <input style={styles.input} placeholder="Customer Name *" value={saleReturnForm.customer_name} onChange={(e) => setSaleReturnForm({ ...saleReturnForm, customer_name: e.target.value })} />
-                <input style={styles.input} placeholder="Phone *" value={saleReturnForm.phone} onChange={(e) => setSaleReturnForm({ ...saleReturnForm, phone: e.target.value })} />
-                <input style={styles.input} placeholder="Return Amount *" type="number" value={saleReturnForm.return_amount} onChange={(e) => setSaleReturnForm({ ...saleReturnForm, return_amount: e.target.value })} />
-                <select style={styles.input} value={saleReturnForm.status} onChange={(e) => setSaleReturnForm({ ...saleReturnForm, status: e.target.value })}>
-                  <option value="unpaid">Unpaid (Customer still owes)</option>
-                  <option value="paid">Paid (Money returned to customer)</option>
-                </select>
-                <input style={styles.input} placeholder="Notes" value={saleReturnForm.notes} onChange={(e) => setSaleReturnForm({ ...saleReturnForm, notes: e.target.value })} />
-                <button style={{ ...styles.button, backgroundColor: "#dc3545" }} onClick={addSalesReturn}>Add Return</button>
+            {activeSalesForm === "addSale" && (
+              <div style={styles.formCard}>
+                <h3 style={styles.formTitle}>➕ Add New Sale</h3>
+                <div style={styles.formRow}>
+                  <input style={styles.input} placeholder="Customer Name *" value={saleForm.customer_name} onChange={(e) => setSaleForm({ ...saleForm, customer_name: e.target.value })} />
+                  <input style={styles.input} placeholder="Phone *" value={saleForm.phone} onChange={(e) => setSaleForm({ ...saleForm, phone: e.target.value })} />
+                  <input style={styles.input} placeholder="Amount *" type="number" value={saleForm.amount} onChange={(e) => setSaleForm({ ...saleForm, amount: e.target.value })} />
+                  <select style={styles.input} value={saleForm.status} onChange={(e) => setSaleForm({ ...saleForm, status: e.target.value })}>
+                    <option value="unpaid">Unpaid</option>
+                    <option value="paid">Paid</option>
+                  </select>
+                  <input style={styles.input} placeholder="Notes" value={saleForm.notes} onChange={(e) => setSaleForm({ ...saleForm, notes: e.target.value })} />
+                  <button style={{ ...styles.button, background: "linear-gradient(135deg, #9BB875, #7A9B58)" }} onClick={addSale}>Add Sale</button>
+                </div>
               </div>
-            </Section>
+            )}
 
-            <Section title="Record Customer Payment">
-              <div style={styles.formRow}>
-                <input style={styles.input} placeholder="Customer Name *" value={customerPaymentForm.customer_name} onChange={(e) => setCustomerPaymentForm({ ...customerPaymentForm, customer_name: e.target.value })} />
-                <input style={styles.input} placeholder="Phone *" value={customerPaymentForm.phone} onChange={(e) => setCustomerPaymentForm({ ...customerPaymentForm, phone: e.target.value })} />
-                <input style={styles.input} placeholder="Payment Amount *" type="number" value={customerPaymentForm.amount} onChange={(e) => setCustomerPaymentForm({ ...customerPaymentForm, amount: e.target.value })} />
-                <input style={styles.input} placeholder="Notes" value={customerPaymentForm.notes} onChange={(e) => setCustomerPaymentForm({ ...customerPaymentForm, notes: e.target.value })} />
-                <button style={{ ...styles.button, backgroundColor: "#28a745" }} onClick={recordCustomerPayment}>Record Payment</button>
+            {activeSalesForm === "addReturn" && (
+              <div style={styles.formCard}>
+                <h3 style={styles.formTitle}>↩️ Add Sales Return</h3>
+                <div style={styles.formRow}>
+                  <input style={styles.input} placeholder="Customer Name *" value={saleReturnForm.customer_name} onChange={(e) => setSaleReturnForm({ ...saleReturnForm, customer_name: e.target.value })} />
+                  <input style={styles.input} placeholder="Phone *" value={saleReturnForm.phone} onChange={(e) => setSaleReturnForm({ ...saleReturnForm, phone: e.target.value })} />
+                  <input style={styles.input} placeholder="Return Amount *" type="number" value={saleReturnForm.return_amount} onChange={(e) => setSaleReturnForm({ ...saleReturnForm, return_amount: e.target.value })} />
+                  <select style={styles.input} value={saleReturnForm.status} onChange={(e) => setSaleReturnForm({ ...saleReturnForm, status: e.target.value })}>
+                    <option value="unpaid">Unpaid (Customer still owes)</option>
+                    <option value="paid">Paid (Money returned to customer)</option>
+                  </select>
+                  <input style={styles.input} placeholder="Notes" value={saleReturnForm.notes} onChange={(e) => setSaleReturnForm({ ...saleReturnForm, notes: e.target.value })} />
+                  <button style={{ ...styles.button, background: "linear-gradient(135deg, #E74C3C, #C0392B)" }} onClick={addSalesReturn}>Add Return</button>
+                </div>
               </div>
-            </Section>
+            )}
 
-            <Section title="Sales List">
-              <Table headers={["Customer", "Phone", "Amount", "Status", "Date", "Notes"]}>
-                {sales.map((sale) => (
-                  <tr key={sale.id}>
-                    <td style={{ fontWeight: 500 }}>{sale.customer_name}</td>
-                    <td>{sale.phone}</td>
-                    <td style={{ fontWeight: 600, color: "#27AE60" }}>₹{Number(sale.amount).toLocaleString()}</td>
-                    <td><span style={{ ...styles.statusBadge, backgroundColor: sale.status === "paid" ? "#27AE60" : "#F39C12", color: "white" }}>{sale.status}</span></td>
-                    <td>{new Date(sale.date).toLocaleDateString()}</td>
-                    <td>{sale.notes}</td>
-                  </tr>
-                ))}
-              </Table>
-            </Section>
-          </>
+            {activeSalesForm === "recordPayment" && (
+              <div style={styles.formCard}>
+                <h3 style={styles.formTitle}>💵 Record Customer Payment</h3>
+                <div style={styles.formRow}>
+                  <input style={styles.input} placeholder="Customer Name *" value={customerPaymentForm.customer_name} onChange={(e) => setCustomerPaymentForm({ ...customerPaymentForm, customer_name: e.target.value })} />
+                  <input style={styles.input} placeholder="Phone *" value={customerPaymentForm.phone} onChange={(e) => setCustomerPaymentForm({ ...customerPaymentForm, phone: e.target.value })} />
+                  <input style={styles.input} placeholder="Payment Amount *" type="number" value={customerPaymentForm.amount} onChange={(e) => setCustomerPaymentForm({ ...customerPaymentForm, amount: e.target.value })} />
+                  <input style={styles.input} placeholder="Notes" value={customerPaymentForm.notes} onChange={(e) => setCustomerPaymentForm({ ...customerPaymentForm, notes: e.target.value })} />
+                  <button style={{ ...styles.button, background: "linear-gradient(135deg, #27AE60, #1E8449)" }} onClick={recordCustomerPayment}>Record Payment</button>
+                </div>
+              </div>
+            )}
+
+            <div style={styles.dataTableCard}>
+              <h3 style={styles.formTitle}>📋 Sales List</h3>
+              <div style={{ overflowX: "auto" }}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Customer</th><th>Phone</th><th>Amount</th><th>Status</th><th>Date</th><th>Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sales.map((sale) => (
+                      <tr key={sale.id}>
+                        <td style={{ fontWeight: 500 }}>{sale.customer_name}</td>
+                        <td>{sale.phone}</td>
+                        <td style={{ fontWeight: 600, color: "#27AE60" }}>₹{Number(sale.amount).toLocaleString()}</td>
+                        <td><span style={{ ...styles.statusBadge, backgroundColor: sale.status === "paid" ? "#27AE60" : "#F39C12" }}>{sale.status}</span></td>
+                        <td>{new Date(sale.date).toLocaleDateString()}</td>
+                        <td>{sale.notes}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* PURCHASES TAB */}
+        {/* PURCHASES TAB - Only one form open at a time */}
         {activeTab === "purchases" && (
-          <>
-            <Section title="Add Purchase">
-              <div style={styles.formRow}>
-                <input style={styles.input} placeholder="Vendor Name *" value={purchaseForm.vendor_name} onChange={(e) => setPurchaseForm({ ...purchaseForm, vendor_name: e.target.value })} />
-                <input style={styles.input} placeholder="Phone *" value={purchaseForm.phone} onChange={(e) => setPurchaseForm({ ...purchaseForm, phone: e.target.value })} />
-                <input style={styles.input} placeholder="Amount *" type="number" value={purchaseForm.amount} onChange={(e) => setPurchaseForm({ ...purchaseForm, amount: e.target.value })} />
-                <select style={styles.input} value={purchaseForm.status} onChange={(e) => setPurchaseForm({ ...purchaseForm, status: e.target.value })}>
-                  <option value="unpaid">Unpaid</option>
-                  <option value="paid">Paid</option>
-                </select>
-                <input style={styles.input} placeholder="Notes" value={purchaseForm.notes} onChange={(e) => setPurchaseForm({ ...purchaseForm, notes: e.target.value })} />
-                <button style={styles.button} onClick={addPurchase}>Add Purchase</button>
-              </div>
-            </Section>
+          <div style={styles.tabContent}>
+            <div style={styles.actionButtonsGroup}>
+              <ActionButton 
+                active={activePurchaseForm === "addPurchase"} 
+                onClick={() => setActivePurchaseForm("addPurchase")}
+                icon="➕" 
+                label="Add Purchase" 
+                color="#E67E22"
+              />
+              <ActionButton 
+                active={activePurchaseForm === "addReturn"} 
+                onClick={() => setActivePurchaseForm("addReturn")}
+                icon="↩️" 
+                label="Add Return" 
+                color="#E74C3C"
+              />
+              <ActionButton 
+                active={activePurchaseForm === "recordPayment"} 
+                onClick={() => setActivePurchaseForm("recordPayment")}
+                icon="💵" 
+                label="Record Payment" 
+                color="#27AE60"
+              />
+            </div>
 
-            <Section title="Add Purchase Return">
-              <div style={styles.formRow}>
-                <input style={styles.input} placeholder="Vendor Name *" value={purchaseReturnForm.vendor_name} onChange={(e) => setPurchaseReturnForm({ ...purchaseReturnForm, vendor_name: e.target.value })} />
-                <input style={styles.input} placeholder="Phone *" value={purchaseReturnForm.phone} onChange={(e) => setPurchaseReturnForm({ ...purchaseReturnForm, phone: e.target.value })} />
-                <input style={styles.input} placeholder="Return Amount *" type="number" value={purchaseReturnForm.return_amount} onChange={(e) => setPurchaseReturnForm({ ...purchaseReturnForm, return_amount: e.target.value })} />
-                <select style={styles.input} value={purchaseReturnForm.status} onChange={(e) => setPurchaseReturnForm({ ...purchaseReturnForm, status: e.target.value })}>
-                  <option value="unpaid">Unpaid (We still owe vendor)</option>
-                  <option value="paid">Paid (Vendor returned money)</option>
-                </select>
-                <input style={styles.input} placeholder="Notes" value={purchaseReturnForm.notes} onChange={(e) => setPurchaseReturnForm({ ...purchaseReturnForm, notes: e.target.value })} />
-                <button style={{ ...styles.button, backgroundColor: "#dc3545" }} onClick={addPurchaseReturn}>Add Return</button>
+            {activePurchaseForm === "addPurchase" && (
+              <div style={styles.formCard}>
+                <h3 style={styles.formTitle}>➕ Add New Purchase</h3>
+                <div style={styles.formRow}>
+                  <input style={styles.input} placeholder="Vendor Name *" value={purchaseForm.vendor_name} onChange={(e) => setPurchaseForm({ ...purchaseForm, vendor_name: e.target.value })} />
+                  <input style={styles.input} placeholder="Phone *" value={purchaseForm.phone} onChange={(e) => setPurchaseForm({ ...purchaseForm, phone: e.target.value })} />
+                  <input style={styles.input} placeholder="Amount *" type="number" value={purchaseForm.amount} onChange={(e) => setPurchaseForm({ ...purchaseForm, amount: e.target.value })} />
+                  <select style={styles.input} value={purchaseForm.status} onChange={(e) => setPurchaseForm({ ...purchaseForm, status: e.target.value })}>
+                    <option value="unpaid">Unpaid</option>
+                    <option value="paid">Paid</option>
+                  </select>
+                  <input style={styles.input} placeholder="Notes" value={purchaseForm.notes} onChange={(e) => setPurchaseForm({ ...purchaseForm, notes: e.target.value })} />
+                  <button style={{ ...styles.button, background: "linear-gradient(135deg, #E67E22, #D35400)" }} onClick={addPurchase}>Add Purchase</button>
+                </div>
               </div>
-            </Section>
+            )}
 
-            <Section title="Record Vendor Payment">
-              <div style={styles.formRow}>
-                <input style={styles.input} placeholder="Vendor Name *" value={vendorPaymentForm.vendor_name} onChange={(e) => setVendorPaymentForm({ ...vendorPaymentForm, vendor_name: e.target.value })} />
-                <input style={styles.input} placeholder="Phone *" value={vendorPaymentForm.phone} onChange={(e) => setVendorPaymentForm({ ...vendorPaymentForm, phone: e.target.value })} />
-                <input style={styles.input} placeholder="Payment Amount *" type="number" value={vendorPaymentForm.amount} onChange={(e) => setVendorPaymentForm({ ...vendorPaymentForm, amount: e.target.value })} />
-                <input style={styles.input} placeholder="Notes" value={vendorPaymentForm.notes} onChange={(e) => setVendorPaymentForm({ ...vendorPaymentForm, notes: e.target.value })} />
-                <button style={{ ...styles.button, backgroundColor: "#28a745" }} onClick={recordVendorPayment}>Record Payment</button>
+            {activePurchaseForm === "addReturn" && (
+              <div style={styles.formCard}>
+                <h3 style={styles.formTitle}>↩️ Add Purchase Return</h3>
+                <div style={styles.formRow}>
+                  <input style={styles.input} placeholder="Vendor Name *" value={purchaseReturnForm.vendor_name} onChange={(e) => setPurchaseReturnForm({ ...purchaseReturnForm, vendor_name: e.target.value })} />
+                  <input style={styles.input} placeholder="Phone *" value={purchaseReturnForm.phone} onChange={(e) => setPurchaseReturnForm({ ...purchaseReturnForm, phone: e.target.value })} />
+                  <input style={styles.input} placeholder="Return Amount *" type="number" value={purchaseReturnForm.return_amount} onChange={(e) => setPurchaseReturnForm({ ...purchaseReturnForm, return_amount: e.target.value })} />
+                  <select style={styles.input} value={purchaseReturnForm.status} onChange={(e) => setPurchaseReturnForm({ ...purchaseReturnForm, status: e.target.value })}>
+                    <option value="unpaid">Unpaid (We still owe vendor)</option>
+                    <option value="paid">Paid (Vendor returned money)</option>
+                  </select>
+                  <input style={styles.input} placeholder="Notes" value={purchaseReturnForm.notes} onChange={(e) => setPurchaseReturnForm({ ...purchaseReturnForm, notes: e.target.value })} />
+                  <button style={{ ...styles.button, background: "linear-gradient(135deg, #E74C3C, #C0392B)" }} onClick={addPurchaseReturn}>Add Return</button>
+                </div>
               </div>
-            </Section>
+            )}
 
-            <Section title="Purchases List">
-              <Table headers={["Vendor", "Phone", "Amount", "Status", "Date", "Notes"]}>
-                {purchases.map((purchase) => (
-                  <tr key={purchase.id}>
-                    <td style={{ fontWeight: 500 }}>{purchase.vendor_name}</td>
-                    <td>{purchase.phone}</td>
-                    <td style={{ fontWeight: 600, color: "#E67E22" }}>₹{Number(purchase.amount).toLocaleString()}</td>
-                    <td><span style={{ ...styles.statusBadge, backgroundColor: purchase.status === "paid" ? "#27AE60" : "#F39C12", color: "white" }}>{purchase.status}</span></td>
-                    <td>{new Date(purchase.date).toLocaleDateString()}</td>
-                    <td>{purchase.notes}</td>
-                  </tr>
-                ))}
-              </Table>
-            </Section>
-          </>
+            {activePurchaseForm === "recordPayment" && (
+              <div style={styles.formCard}>
+                <h3 style={styles.formTitle}>💵 Record Vendor Payment</h3>
+                <div style={styles.formRow}>
+                  <input style={styles.input} placeholder="Vendor Name *" value={vendorPaymentForm.vendor_name} onChange={(e) => setVendorPaymentForm({ ...vendorPaymentForm, vendor_name: e.target.value })} />
+                  <input style={styles.input} placeholder="Phone *" value={vendorPaymentForm.phone} onChange={(e) => setVendorPaymentForm({ ...vendorPaymentForm, phone: e.target.value })} />
+                  <input style={styles.input} placeholder="Payment Amount *" type="number" value={vendorPaymentForm.amount} onChange={(e) => setVendorPaymentForm({ ...vendorPaymentForm, amount: e.target.value })} />
+                  <input style={styles.input} placeholder="Notes" value={vendorPaymentForm.notes} onChange={(e) => setVendorPaymentForm({ ...vendorPaymentForm, notes: e.target.value })} />
+                  <button style={{ ...styles.button, background: "linear-gradient(135deg, #27AE60, #1E8449)" }} onClick={recordVendorPayment}>Record Payment</button>
+                </div>
+              </div>
+            )}
+
+            <div style={styles.dataTableCard}>
+              <h3 style={styles.formTitle}>📋 Purchases List</h3>
+              <div style={{ overflowX: "auto" }}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Vendor</th><th>Phone</th><th>Amount</th><th>Status</th><th>Date</th><th>Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {purchases.map((purchase) => (
+                      <tr key={purchase.id}>
+                        <td style={{ fontWeight: 500 }}>{purchase.vendor_name}</td>
+                        <td>{purchase.phone}</td>
+                        <td style={{ fontWeight: 600, color: "#E67E22" }}>₹{Number(purchase.amount).toLocaleString()}</td>
+                        <td><span style={{ ...styles.statusBadge, backgroundColor: purchase.status === "paid" ? "#27AE60" : "#F39C12" }}>{purchase.status}</span></td>
+                        <td>{new Date(purchase.date).toLocaleDateString()}</td>
+                        <td>{purchase.notes}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* EXPENSES TAB */}
         {activeTab === "expenses" && (
-          <>
-            <Section title="Add Expense">
+          <div>
+            <div style={styles.formCard}>
+              <h3 style={styles.formTitle}>💸 Add New Expense</h3>
               <div style={styles.formRow}>
                 <input style={styles.input} placeholder="Category *" value={expenseForm.category} onChange={(e) => setExpenseForm({ ...expenseForm, category: e.target.value })} />
                 <input style={styles.input} placeholder="Amount *" type="number" value={expenseForm.amount} onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })} />
                 <input style={styles.input} placeholder="Description" value={expenseForm.description} onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })} />
                 <button style={styles.button} onClick={addExpense}>Add Expense</button>
               </div>
-            </Section>
+            </div>
 
-            <Section title="Expenses List">
-              <Table headers={["Category", "Amount", "Description", "Date", "Action"]}>
-                {expenses.map((expense) => (
-                  <tr key={expense.id}>
-                    <td style={{ fontWeight: 500 }}>{expense.category}</td>
-                    <td style={{ fontWeight: 600, color: "#3498DB" }}>₹{Number(expense.amount).toLocaleString()}</td>
-                    <td>{expense.description}</td>
-                    <td>{new Date(expense.date).toLocaleDateString()}</td>
-                    <td><button style={styles.deleteButton} onClick={() => deleteExpense(expense.id)}>Delete</button></td>
-                  </tr>
-                ))}
-              </Table>
-            </Section>
-          </>
+            <div style={styles.dataTableCard}>
+              <h3 style={styles.formTitle}>📋 Expenses List</h3>
+              <div style={{ overflowX: "auto" }}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr><th>Category</th><th>Amount</th><th>Description</th><th>Date</th><th>Action</th></tr>
+                  </thead>
+                  <tbody>
+                    {expenses.map((expense) => (
+                      <tr key={expense.id}>
+                        <td style={{ fontWeight: 500 }}>{expense.category}</td>
+                        <td style={{ fontWeight: 600, color: "#3498DB" }}>₹{Number(expense.amount).toLocaleString()}</td>
+                        <td>{expense.description}</td>
+                        <td>{new Date(expense.date).toLocaleDateString()}</td>
+                        <td><button style={styles.deleteButton} onClick={() => deleteExpense(expense.id)}>Delete</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* CUSTOMERS TAB */}
         {activeTab === "customers" && (
-          <Section title="All Customers & Ledger">
+          <div style={styles.dataTableCard}>
+            <h3 style={styles.formTitle}>👥 All Customers & Ledger</h3>
             <div style={{ overflowX: "auto" }}>
               <table style={styles.table}>
                 <thead>
-                  <tr>
-                    <th>Customer Name</th>
-                    <th>Phone</th>
-                    <th>Current Balance</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
+                  <tr><th>Customer Name</th><th>Phone</th><th>Current Balance</th><th>Status</th><th>Action</th></tr>
                 </thead>
                 <tbody>
                   {customerBalances.map((c, idx) => (
@@ -691,10 +756,10 @@ export default function App() {
                       </td>
                       <td>
                         {c.balance > 0 ? 
-                          <span style={{ backgroundColor: "#FFEBEE", color: "#E74C3C", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>To Pay: ₹{c.balance.toLocaleString()}</span> : 
+                          <span style={styles.pendingBadge}>To Pay: ₹{c.balance.toLocaleString()}</span> : 
                          c.balance < 0 ? 
-                          <span style={{ backgroundColor: "#E8F5E9", color: "#27AE60", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>To Receive: ₹{Math.abs(c.balance).toLocaleString()}</span> :
-                          <span style={{ backgroundColor: "#EEEEEE", color: "#666", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>Settled</span>
+                          <span style={styles.receiveBadge}>To Receive: ₹{Math.abs(c.balance).toLocaleString()}</span> :
+                          <span style={styles.settledBadge}>Settled</span>
                         }
                       </td>
                       <td>
@@ -707,22 +772,17 @@ export default function App() {
                 </tbody>
               </table>
             </div>
-          </Section>
+          </div>
         )}
 
         {/* VENDORS TAB */}
         {activeTab === "vendors" && (
-          <Section title="All Vendors & Ledger">
+          <div style={styles.dataTableCard}>
+            <h3 style={styles.formTitle}>🏢 All Vendors & Ledger</h3>
             <div style={{ overflowX: "auto" }}>
               <table style={styles.table}>
                 <thead>
-                  <tr>
-                    <th>Vendor Name</th>
-                    <th>Phone</th>
-                    <th>Current Balance</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
+                  <tr><th>Vendor Name</th><th>Phone</th><th>Current Balance</th><th>Status</th><th>Action</th></tr>
                 </thead>
                 <tbody>
                   {vendorBalances.map((v, idx) => (
@@ -734,10 +794,10 @@ export default function App() {
                       </td>
                       <td>
                         {v.balance > 0 ? 
-                          <span style={{ backgroundColor: "#FFEBEE", color: "#E74C3C", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>To Pay: ₹{v.balance.toLocaleString()}</span> : 
+                          <span style={styles.pendingBadge}>To Pay: ₹{v.balance.toLocaleString()}</span> : 
                          v.balance < 0 ? 
-                          <span style={{ backgroundColor: "#E8F5E9", color: "#27AE60", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>To Receive: ₹{Math.abs(v.balance).toLocaleString()}</span> :
-                          <span style={{ backgroundColor: "#EEEEEE", color: "#666", padding: "4px 12px", borderRadius: 20, fontSize: 12 }}>Settled</span>
+                          <span style={styles.receiveBadge}>To Receive: ₹{Math.abs(v.balance).toLocaleString()}</span> :
+                          <span style={styles.settledBadge}>Settled</span>
                         }
                       </td>
                       <td>
@@ -750,115 +810,79 @@ export default function App() {
                 </tbody>
               </table>
             </div>
-          </Section>
+          </div>
         )}
 
         {/* CUSTOMER LEDGER TAB */}
         {activeTab === "customerLedger" && selectedCustomer && (
-          <Section title={`Complete Ledger: ${selectedCustomer.name} (${selectedCustomer.phone})`}>
-            <button style={styles.backButton} onClick={() => setActiveTab("customers")}>← Back to Customers</button>
+          <div style={styles.dataTableCard}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={styles.formTitle}>📒 Complete Ledger: {selectedCustomer.name} ({selectedCustomer.phone})</h3>
+              <button style={styles.backButton} onClick={() => setActiveTab("customers")}>← Back to Customers</button>
+            </div>
             <div style={{ overflowX: "auto" }}>
               <table style={styles.table}>
                 <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Sale Amount (Debit)</th>
-                    <th>Payment/Return (Credit)</th>
-                    <th>Balance</th>
-                    <th>Payment Status</th>
-                    <th>Notes</th>
-                  </tr>
+                  <tr><th>Date</th><th>Type</th><th>Sale Amount</th><th>Payment/Return</th><th>Balance</th><th>Status</th><th>Notes</th></tr>
                 </thead>
                 <tbody>
                   {customerLedger.map((entry, idx) => (
                     <tr key={idx} style={{ backgroundColor: entry.paymentStatus === "paid" ? "#E8F5E9" : entry.type === "sale" && entry.paymentStatus === "unpaid" ? "#FFF8E1" : "white" }}>
                       <td>{new Date(entry.date).toLocaleString()}</td>
-                      <td style={{ fontWeight: "bold" }}>
-                        {entry.type === "sale" ? "💰 SALE" : entry.type === "payment" ? "💵 PAYMENT" : "↩️ RETURN"}
-                      </td>
-                      <td style={{ color: "#E74C3C", fontWeight: entry.debit > 0 ? "bold" : "normal" }}>
-                        {entry.debit > 0 ? `₹${entry.debit.toLocaleString()}` : "-"}
-                      </td>
-                      <td style={{ color: "#27AE60", fontWeight: entry.credit > 0 ? "bold" : "normal" }}>
-                        {entry.credit > 0 ? `₹${entry.credit.toLocaleString()}` : "-"}
-                       </td>
-                      <td style={{ fontWeight: "bold", color: entry.balance > 0 ? "#E74C3C" : entry.balance < 0 ? "#27AE60" : "#333" }}>
-                        ₹{entry.balance.toLocaleString()}
-                       </td>
-                      <td>
-                        {entry.paymentStatus === "paid" ? 
-                          <span style={{ color: "#27AE60" }}>✓ Paid</span> : 
-                          <span style={{ color: "#E74C3C" }}>⏳ Unpaid</span>
-                        }
-                       </td>
+                      <td style={{ fontWeight: "bold" }}>{entry.type === "sale" ? "💰 SALE" : entry.type === "payment" ? "💵 PAYMENT" : "↩️ RETURN"}</td>
+                      <td style={{ color: "#E74C3C" }}>{entry.debit > 0 ? `₹${entry.debit.toLocaleString()}` : "-"}</td>
+                      <td style={{ color: "#27AE60" }}>{entry.credit > 0 ? `₹${entry.credit.toLocaleString()}` : "-"}</td>
+                      <td style={{ fontWeight: "bold", color: entry.balance > 0 ? "#E74C3C" : entry.balance < 0 ? "#27AE60" : "#333" }}>₹{entry.balance.toLocaleString()}</td>
+                      <td>{entry.paymentStatus === "paid" ? <span style={{ color: "#27AE60" }}>✓ Paid</span> : <span style={{ color: "#E74C3C" }}>⏳ Unpaid</span>}</td>
                       <td>{entry.notes}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div style={{ marginTop: 20, padding: 20, background: "linear-gradient(135deg, #E8F5E9, #C8E6C9)", borderRadius: 16 }}>
+            <div style={styles.balanceSummary}>
               <strong>Current Balance: </strong>
-              <span style={{ fontSize: 24, fontWeight: "bold", color: customerLedger[customerLedger.length - 1]?.balance > 0 ? "#E74C3C" : customerLedger[customerLedger.length - 1]?.balance < 0 ? "#27AE60" : "#333" }}>
+              <span style={{ fontSize: 24, fontWeight: "bold", color: customerLedger[customerLedger.length - 1]?.balance > 0 ? "#E74C3C" : "#27AE60" }}>
                 ₹{Math.abs(customerLedger[customerLedger.length - 1]?.balance || 0).toLocaleString()}
               </span>
             </div>
-          </Section>
+          </div>
         )}
 
         {/* VENDOR LEDGER TAB */}
         {activeTab === "vendorLedger" && selectedVendor && (
-          <Section title={`Complete Ledger: ${selectedVendor.name} (${selectedVendor.phone})`}>
-            <button style={styles.backButton} onClick={() => setActiveTab("vendors")}>← Back to Vendors</button>
+          <div style={styles.dataTableCard}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h3 style={styles.formTitle}>📒 Complete Ledger: {selectedVendor.name} ({selectedVendor.phone})</h3>
+              <button style={styles.backButton} onClick={() => setActiveTab("vendors")}>← Back to Vendors</button>
+            </div>
             <div style={{ overflowX: "auto" }}>
               <table style={styles.table}>
                 <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Type</th>
-                    <th>Payment/Return (Debit)</th>
-                    <th>Purchase Amount (Credit)</th>
-                    <th>Balance</th>
-                    <th>Payment Status</th>
-                    <th>Notes</th>
-                  </tr>
+                  <tr><th>Date</th><th>Type</th><th>Payment/Return</th><th>Purchase Amount</th><th>Balance</th><th>Status</th><th>Notes</th></tr>
                 </thead>
                 <tbody>
                   {vendorLedger.map((entry, idx) => (
                     <tr key={idx} style={{ backgroundColor: entry.paymentStatus === "paid" ? "#E8F5E9" : entry.type === "purchase" && entry.paymentStatus === "unpaid" ? "#FFF8E1" : "white" }}>
-                      <td>{new Date(entry.date).toLocaleString()} </td>
-                      <td style={{ fontWeight: "bold" }}>
-                        {entry.type === "purchase" ? "📦 PURCHASE" : entry.type === "payment" ? "💵 PAYMENT" : "↩️ RETURN"}
-                       </td>
-                      <td style={{ color: "#27AE60", fontWeight: entry.debit > 0 ? "bold" : "normal" }}>
-                        {entry.debit > 0 ? `₹${entry.debit.toLocaleString()}` : "-"}
-                       </td>
-                      <td style={{ color: "#E74C3C", fontWeight: entry.credit > 0 ? "bold" : "normal" }}>
-                        {entry.credit > 0 ? `₹${entry.credit.toLocaleString()}` : "-"}
-                       </td>
-                      <td style={{ fontWeight: "bold", color: entry.balance > 0 ? "#E74C3C" : entry.balance < 0 ? "#27AE60" : "#333" }}>
-                        ₹{entry.balance.toLocaleString()}
-                       </td>
-                      <td>
-                        {entry.paymentStatus === "paid" ? 
-                          <span style={{ color: "#27AE60" }}>✓ Paid</span> : 
-                          <span style={{ color: "#E74C3C" }}>⏳ Unpaid</span>
-                        }
-                       </td>
+                      <td>{new Date(entry.date).toLocaleString()}</td>
+                      <td style={{ fontWeight: "bold" }}>{entry.type === "purchase" ? "📦 PURCHASE" : entry.type === "payment" ? "💵 PAYMENT" : "↩️ RETURN"}</td>
+                      <td style={{ color: "#27AE60" }}>{entry.debit > 0 ? `₹${entry.debit.toLocaleString()}` : "-"}</td>
+                      <td style={{ color: "#E74C3C" }}>{entry.credit > 0 ? `₹${entry.credit.toLocaleString()}` : "-"}</td>
+                      <td style={{ fontWeight: "bold", color: entry.balance > 0 ? "#E74C3C" : entry.balance < 0 ? "#27AE60" : "#333" }}>₹{entry.balance.toLocaleString()}</td>
+                      <td>{entry.paymentStatus === "paid" ? <span style={{ color: "#27AE60" }}>✓ Paid</span> : <span style={{ color: "#E74C3C" }}>⏳ Unpaid</span>}</td>
                       <td>{entry.notes}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div style={{ marginTop: 20, padding: 20, background: "linear-gradient(135deg, #E8F5E9, #C8E6C9)", borderRadius: 16 }}>
+            <div style={styles.balanceSummary}>
               <strong>Current Balance: </strong>
-              <span style={{ fontSize: 24, fontWeight: "bold", color: vendorLedger[vendorLedger.length - 1]?.balance > 0 ? "#E74C3C" : vendorLedger[vendorLedger.length - 1]?.balance < 0 ? "#27AE60" : "#333" }}>
+              <span style={{ fontSize: 24, fontWeight: "bold", color: vendorLedger[vendorLedger.length - 1]?.balance > 0 ? "#E74C3C" : "#27AE60" }}>
                 ₹{Math.abs(vendorLedger[vendorLedger.length - 1]?.balance || 0).toLocaleString()}
               </span>
             </div>
-          </Section>
+          </div>
         )}
       </div>
 
@@ -867,16 +891,17 @@ export default function App() {
         <div style={styles.modalOverlay} onClick={() => setShowAnalytics(false)}>
           <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
-              <h2 style={{ margin: 0, fontFamily: "'Playfair Display', serif" }}>📊 Sales Analytics</h2>
+              <h2 style={{ margin: 0 }}>📊 Sales Analytics</h2>
               <button style={styles.modalClose} onClick={() => setShowAnalytics(false)}>×</button>
             </div>
             
             <div style={styles.filterGroup}>
-              <button onClick={() => handleAnalyticsFilter("today")} style={{ ...styles.filterButton, backgroundColor: analyticsFilter === "today" ? "var(--BalaJi-sage)" : "#f0f0f0" }}>Today</button>
-              <button onClick={() => handleAnalyticsFilter("week")} style={{ ...styles.filterButton, backgroundColor: analyticsFilter === "week" ? "var(--BalaJi-sage)" : "#f0f0f0" }}>This Week</button>
-              <button onClick={() => handleAnalyticsFilter("month")} style={{ ...styles.filterButton, backgroundColor: analyticsFilter === "month" ? "var(--BalaJi-sage)" : "#f0f0f0" }}>This Month</button>
-              <button onClick={() => handleAnalyticsFilter("year")} style={{ ...styles.filterButton, backgroundColor: analyticsFilter === "year" ? "var(--BalaJi-sage)" : "#f0f0f0" }}>This Year</button>
-              <button onClick={() => setAnalyticsFilter("custom")} style={{ ...styles.filterButton, backgroundColor: analyticsFilter === "custom" ? "var(--BalaJi-sage)" : "#f0f0f0" }}>Custom</button>
+              {["today", "week", "month", "year"].map(filter => (
+                <button key={filter} onClick={() => handleAnalyticsFilter(filter)} style={{ ...styles.filterButton, backgroundColor: analyticsFilter === filter ? "#9BB875" : "#f0f0f0", color: analyticsFilter === filter ? "white" : "#333" }}>
+                  {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                </button>
+              ))}
+              <button onClick={() => setAnalyticsFilter("custom")} style={{ ...styles.filterButton, backgroundColor: analyticsFilter === "custom" ? "#9BB875" : "#f0f0f0", color: analyticsFilter === "custom" ? "white" : "#333" }}>Custom</button>
             </div>
 
             {analyticsFilter === "custom" && (
@@ -900,9 +925,7 @@ export default function App() {
                 {analyticsData.salesData && analyticsData.salesData.length > 0 && (
                   <div style={{ overflowX: "auto", marginTop: 20 }}>
                     <table style={styles.table}>
-                      <thead>
-                        <tr><th>Date</th><th>Customer</th><th>Amount</th><th>Status</th></tr>
-                      </thead>
+                      <thead><tr><th>Date</th><th>Customer</th><th>Amount</th><th>Status</th></tr></thead>
                       <tbody>
                         {analyticsData.salesData.map((sale, i) => (
                           <tr key={i}><td>{new Date(sale.date).toLocaleDateString()}</td><td>{sale.customer_name}</td><td style={{ color: "#27AE60", fontWeight: 600 }}>₹{Number(sale.amount).toLocaleString()}</td><td><span style={{ ...styles.statusBadge, backgroundColor: sale.status === "paid" ? "#27AE60" : "#F39C12" }}>{sale.status}</span></td></tr>
@@ -921,81 +944,107 @@ export default function App() {
 }
 
 // ================= COMPONENTS =================
-function Card({ title, value, icon, color }) {
+function StatCard({ title, value, icon, color }) {
   return (
     <div style={styles.card}>
-      <div style={{ fontSize: 32, marginBottom: 10 }}>{icon}</div>
-      <h3 style={{ margin: 0, fontSize: 14, color: "#666", letterSpacing: 1 }}>{title}</h3>
-      <h2 style={{ margin: "8px 0 0", color: color || "var(--BalaJi-text-dark)", fontSize: 22 }}>{value || 0}</h2>
+      <div style={{ fontSize: 28, marginBottom: 8 }}>{icon}</div>
+      <h3 style={{ margin: 0, fontSize: 12, color: "#666", letterSpacing: 1 }}>{title}</h3>
+      <h2 style={{ margin: "8px 0 0", color: color || "#2C3E2F", fontSize: 20 }}>₹{value?.toLocaleString() || 0}</h2>
     </div>
   );
 }
 
-function Section({ title, children }) {
+function QuickActionCard({ icon, title, onClick, color }) {
   return (
-    <div style={styles.section}>
-      <h2 style={styles.sectionTitle}>{title}</h2>
-      {children}
+    <div style={{ ...styles.quickActionCard, borderBottom: `3px solid ${color}` }} onClick={onClick}>
+      <div style={{ fontSize: 32, marginBottom: 8 }}>{icon}</div>
+      <div style={{ fontWeight: 600 }}>{title}</div>
     </div>
   );
 }
 
-function Table({ headers, children }) {
+function ActionButton({ active, onClick, icon, label, color }) {
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table style={styles.table}>
-        <thead><tr>{headers.map(h => <th key={h}>{h}</th>)}</tr></thead>
-        <tbody>{children}</tbody>
-      </table>
-    </div>
+    <button 
+      style={{ 
+        ...styles.actionBtn, 
+        ...(active ? { ...styles.actionBtnActive, borderBottomColor: color, color: color, background: `${color}10` } : {})
+      }} 
+      onClick={onClick}
+    >
+      {icon} {label}
+    </button>
   );
 }
 
 // ================= STYLES =================
 const styles = {
-  container: { background: "#F2EDE4", minHeight: "100vh", fontFamily: "'Poppins', sans-serif" },
-  premiumHeader: { background: "white", padding: "16px 0", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", borderBottom: "3px solid #9BB875" },
-  tabsWrapper: { background: "white", borderBottom: "1px solid #E0D8CA", marginBottom: 30 },
-  tabs: { display: "flex", flexWrap: "wrap", gap: 5, padding: "10px 0" },
-  tab: { padding: "10px 24px", background: "transparent", border: "none", borderRadius: 50, cursor: "pointer", fontWeight: 500, transition: "all 0.3s" },
+  container: { background: "#F5F0E8", minHeight: "100vh", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" },
+  premiumHeader: { background: "white", padding: "20px 0", boxShadow: "0 2px 20px rgba(0,0,0,0.05)", borderBottom: "3px solid #9BB875" },
+  headerContent: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 20 },
+  logo: { fontSize: "1.8rem", margin: 0, fontWeight: 700, letterSpacing: "-0.5px" },
+  tagline: { margin: 0, fontSize: "0.8rem", color: "#666" },
+  headerActions: { display: "flex", gap: 12 },
+  analyticsBtn: { background: "linear-gradient(135deg, #9BB875, #7A9B58)", border: "none", padding: "10px 20px", borderRadius: 30, color: "white", fontWeight: 600, cursor: "pointer", transition: "transform 0.2s" },
+  logoutBtn: { background: "transparent", border: "1px solid #ddd", padding: "10px 20px", borderRadius: 30, color: "#666", fontWeight: 600, cursor: "pointer", transition: "all 0.2s" },
+  tabsWrapper: { background: "white", borderBottom: "1px solid #E8E0D5", marginBottom: 30, position: "sticky", top: 0, zIndex: 100 },
+  tabs: { display: "flex", flexWrap: "wrap", gap: 5, padding: "12px 0" },
+  tab: { padding: "10px 24px", background: "transparent", border: "none", borderRadius: 30, cursor: "pointer", fontWeight: 500, transition: "all 0.2s", color: "#666" },
   activeTab: { background: "#9BB875", color: "white" },
-  section: { background: "white", marginTop: 25, padding: 25, borderRadius: 24, boxShadow: "0 5px 20px rgba(0,0,0,0.05)" },
-  sectionTitle: { fontSize: "1.5rem", fontWeight: 600, color: "#2C3E2F", marginBottom: 20, fontFamily: "'Playfair Display', serif", borderLeft: "4px solid #9BB875", paddingLeft: 15 },
-  statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20, marginBottom: 30 },
-  card: { background: "white", padding: 20, borderRadius: 20, textAlign: "center", boxShadow: "0 5px 15px rgba(0,0,0,0.05)", transition: "transform 0.3s", cursor: "pointer", border: "1px solid rgba(155,184,117,0.2)" },
-  input: { padding: "12px 16px", marginBottom: 0, borderRadius: 16, border: "2px solid #E0D8CA", fontSize: 14, fontFamily: "'Poppins', sans-serif", transition: "all 0.3s", outline: "none" },
-  formRow: { display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" },
-  button: { padding: "12px 24px", background: "linear-gradient(135deg, #9BB875, #7A9B58)", color: "white", border: "none", borderRadius: 50, cursor: "pointer", fontWeight: 600, transition: "all 0.3s" },
-  deleteButton: { background: "#E74C3C", color: "white", border: "none", padding: "6px 12px", borderRadius: 12, cursor: "pointer", fontSize: 12 },
-  smallButton: { background: "#9BB875", color: "white", border: "none", padding: "6px 12px", borderRadius: 12, cursor: "pointer", fontSize: 12, fontWeight: 500 },
-  backButton: { background: "#6c757d", color: "white", border: "none", padding: "8px 20px", borderRadius: 50, cursor: "pointer", marginBottom: 20, fontWeight: 500 },
-  quickButton: { padding: "12px 24px", background: "linear-gradient(135deg, #9BB875, #7A9B58)", color: "white", border: "none", borderRadius: 50, cursor: "pointer", fontWeight: 600 },
-  quickButtonSecondary: { padding: "12px 24px", background: "white", color: "#2C3E2F", border: "2px solid #9BB875", borderRadius: 50, cursor: "pointer", fontWeight: 600 },
-  quickButtonAnalytics: { padding: "12px 24px", background: "linear-gradient(135deg, #3A7BD5, #2C5F8A)", color: "white", border: "none", borderRadius: 50, cursor: "pointer", fontWeight: 600 },
+  statsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 20, marginBottom: 30 },
+  card: { background: "white", padding: "20px 16px", borderRadius: 20, textAlign: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.04)", transition: "transform 0.2s", cursor: "pointer", border: "1px solid rgba(155,184,117,0.15)" },
+  quickActionsSection: { background: "white", marginTop: 25, padding: 25, borderRadius: 24, boxShadow: "0 4px 12px rgba(0,0,0,0.04)" },
+  sectionTitle: { fontSize: "1.3rem", fontWeight: 600, color: "#2C3E2F", marginBottom: 20, borderLeft: "4px solid #9BB875", paddingLeft: 15 },
+  quickActionsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 15 },
+  quickActionCard: { background: "#FAF8F5", padding: "20px 16px", borderRadius: 16, textAlign: "center", cursor: "pointer", transition: "transform 0.2s, box-shadow 0.2s", border: "1px solid #EAE3D8" },
+  tabContent: { display: "flex", flexDirection: "column", gap: 20 },
+  actionButtonsGroup: { display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 5 },
+  actionBtn: { padding: "12px 28px", background: "white", border: "none", borderRadius: 40, cursor: "pointer", fontWeight: 600, fontSize: 14, boxShadow: "0 2px 6px rgba(0,0,0,0.08)", transition: "all 0.2s" },
+  actionBtnActive: { borderBottom: "3px solid", fontWeight: 700 },
+  formCard: { background: "white", padding: 24, borderRadius: 20, boxShadow: "0 4px 12px rgba(0,0,0,0.04)", marginBottom: 20 },
+  formTitle: { fontSize: "1.1rem", fontWeight: 600, color: "#2C3E2F", marginBottom: 20, display: "flex", alignItems: "center", gap: 8 },
+  dataTableCard: { background: "white", padding: 24, borderRadius: 20, boxShadow: "0 4px 12px rgba(0,0,0,0.04)" },
+  formRow: { display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" },
+  input: { padding: "12px 16px", borderRadius: 12, border: "2px solid #E8E0D5", fontSize: 14, fontFamily: "'Inter', sans-serif", transition: "all 0.2s", outline: "none", flex: "1 1 200px", background: "white" },
+  button: { padding: "12px 28px", background: "linear-gradient(135deg, #9BB875, #7A9B58)", color: "white", border: "none", borderRadius: 30, cursor: "pointer", fontWeight: 600, transition: "transform 0.2s" },
+  deleteButton: { background: "#E74C3C", color: "white", border: "none", padding: "6px 16px", borderRadius: 20, cursor: "pointer", fontSize: 12, fontWeight: 500 },
+  smallButton: { background: "#9BB875", color: "white", border: "none", padding: "6px 16px", borderRadius: 20, cursor: "pointer", fontSize: 12, fontWeight: 500 },
+  backButton: { background: "#6c757d", color: "white", border: "none", padding: "8px 20px", borderRadius: 30, cursor: "pointer", fontWeight: 500 },
   table: { width: "100%", borderCollapse: "collapse", borderRadius: 16, overflow: "hidden" },
-  tableTh: { border: "1px solid #E0D8CA", padding: 12, textAlign: "left", background: "#F2EDE4", fontWeight: 600 },
-  tableTd: { border: "1px solid #E0D8CA", padding: 12 },
-  loader: { textAlign: "center", padding: 40, fontSize: 18, color: "#9BB875" },
-  loginContainer: { height: "100vh", display: "flex", justifyContent: "center", alignItems: "center", background: "linear-gradient(135deg, #F2EDE4, #E0D8CA)" },
+  statusBadge: { padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600, color: "white" },
+  pendingBadge: { backgroundColor: "#FFEBEE", color: "#E74C3C", padding: "4px 12px", borderRadius: 20, fontSize: 12 },
+  receiveBadge: { backgroundColor: "#E8F5E9", color: "#27AE60", padding: "4px 12px", borderRadius: 20, fontSize: 12 },
+  settledBadge: { backgroundColor: "#EEEEEE", color: "#666", padding: "4px 12px", borderRadius: 20, fontSize: 12 },
+  balanceSummary: { marginTop: 20, padding: 20, background: "linear-gradient(135deg, #E8F5E9, #DCEDC8)", borderRadius: 16, textAlign: "center" },
+  loaderOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.3)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 },
+  loader: { width: 40, height: 40, border: "4px solid #f3f3f3", borderTop: "4px solid #9BB875", borderRadius: "50%", animation: "spin 1s linear infinite" },
+  loginContainer: { height: "100vh", display: "flex", justifyContent: "center", alignItems: "center", background: "linear-gradient(135deg, #F5F0E8, #E8E0D5)" },
   loginCard: { width: 380, background: "white", padding: 40, borderRadius: 32, boxShadow: "0 20px 40px rgba(0,0,0,0.1)", textAlign: "center" },
-  statusBadge: { padding: "4px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600 },
   modalOverlay: { position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 },
   modalContent: { background: "white", borderRadius: 24, padding: 30, maxWidth: 900, width: "90%", maxHeight: "80vh", overflowY: "auto" },
-  modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 15, borderBottom: "2px solid #F2EDE4" },
+  modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, paddingBottom: 15, borderBottom: "2px solid #F5F0E8" },
   modalClose: { background: "none", border: "none", fontSize: 32, cursor: "pointer", color: "#666" },
   filterGroup: { display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 },
-  filterButton: { padding: "8px 20px", border: "none", borderRadius: 50, cursor: "pointer", fontWeight: 500, transition: "all 0.3s" },
+  filterButton: { padding: "8px 20px", border: "none", borderRadius: 30, cursor: "pointer", fontWeight: 500, transition: "all 0.2s" },
   customDateRange: { display: "flex", gap: 10, alignItems: "center", marginBottom: 20, flexWrap: "wrap" },
-  analyticsStats: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 15, marginBottom: 25 },
+  analyticsStats: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 15, marginBottom: 25 },
   analyticsCard: { background: "#F9F7F2", padding: 15, borderRadius: 16, textAlign: "center" },
   analyticsCardIcon: { fontSize: 28, marginBottom: 8 }
 };
 
-// Add hover effect styles via global style injection
+// Add global styles
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
-  .home button:hover { transform: translateY(-2px); }
-  .home .card:hover { transform: translateY(-5px); }
-  input:focus, select:focus, textarea:focus { border-color: #9BB875 !important; outline: none; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #F5F0E8; }
+  .home button:hover { transform: translateY(-2px); opacity: 0.95; }
+  .home .card:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+  .home .quick-action-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+  input:focus, select:focus { border-color: #9BB875 !important; outline: none; box-shadow: 0 0 0 3px rgba(155,184,117,0.1); }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #F5F0E8; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb { background: #CBBEAB; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #9BB875; }
 `;
 document.head.appendChild(styleSheet);
